@@ -52,7 +52,7 @@ def distance(k, i):
     Output: number representing the similarity between k and i'''
     return np.abs(np.subtract(k, i)).sum()
 
-def draw_round(player1, player2, titulo):
+def draw_round(player1, player2, titulo, Num_Loc):
 
     # Initializing Plot
     fig = plt.figure()
@@ -75,7 +75,6 @@ def draw_round(player1, player2, titulo):
     ax3.yaxis.tick_right()
 
     # Ploting regions
-    Num_Loc = 8
     reg1 = code2Vector(player1.where, Num_Loc)
     reg2 = code2Vector(player2.where, Num_Loc)
     step = 1. / Num_Loc
