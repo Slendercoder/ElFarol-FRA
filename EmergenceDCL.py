@@ -1,5 +1,4 @@
 from random import choices, uniform, randint
-from math import floor
 import numpy as np
 import pandas as pd
 import os
@@ -15,19 +14,21 @@ DEB = False
 class player :
 	'''Object defining a player.'''
 
-	def __init__(self, Ready, Decision, Choice, Where, Score, Accuracy, Name, modelParameters):
-		self.ready = Ready
+	def __init__(self, Decision, Choice, Where, Score, Name, modelParameters):
 		self.decision = Decision
 		self.choice = Choice
 		self.where = Where
 		self.score = Score
-		self.accuracy = Accuracy
 		self.name = Name
 		self.parameters = modelParameters
 		self.regionsNames = ['RS', \
 		           'ALL', \
 		           'NOTHING', \
-		           'ALTERNATE']
+		           'ALTER1', \
+		           'ALTER2', \
+		           'ALTER3', \
+		           'ALTER4', \
+		           'ALTER5']
 		self.regionsCoded = ['abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;:', # ALL
 		                  '', # NOTHING
 						  'abcfghklmpqruvwzABEFGJKLOPQTUVYZ034589;', # ALTER1
@@ -50,9 +51,13 @@ class player :
 	def attract(self, Num_Loc, DEB=False):
 		wALL = float(self.parameters['ALL'])
 		wNOTHING = float(self.parameters['NOTHING'])
-		wALTERNATE = float(self.parameters['3-GO-2-STAY'])
-		wRS = 1 - np.sum(np.array([wALL, wNOTHING, wALTERNATE]))
-		assert(wRS > 0), "Incorrect biases! Sum greater than 1"
+		wALTER1 = float(self.parameters['ALTER1'])
+		wALTER2 = float(self.parameters['ALTER2'])
+		wALTER3 = float(self.parameters['ALTER3'])
+		wALTER4 = float(self.parameters['ALTER4'])
+		wALTER5 = float(self.parameters['ALTER5'])
+		wRS = 1 - np.sum(np.array([wALL, wNOTHING, wALTER1, wALTER2, wALTER3, wALTER4, wALTER5]))
+		assert(wRS >= 0), "Incorrect biases! Sum greater than 1"
 
 		alpha = float(self.parameters['alpha']) # for how much the focal region augments attractiveness
 		beta = float(self.parameters['beta']) # amplitude of the WSLS sigmoid function
@@ -63,7 +68,7 @@ class player :
 		zeta = float(self.parameters['zeta']) # position of the FRA sigmoid function
 
 		# start from biases
-		attractiveness = [wRS, wALL, wNOTHING, wALTERNATE]
+		attractiveness = [wRS, wALL, wNOTHING, wALTER1, wALTER2, wALTER3, wALTER4, wALTER5]
 		if DEB:
 			attactPrint = ["%.3f" % v for v in attractiveness]
 			print('Player', self.name)
@@ -71,20 +76,20 @@ class player :
 
 		# Adding 'Win Stay'
 		if self.choice != 0:
-			attractiveness[self.choice] += alpha * FRA.sigmoid(self.score, beta, gamma)
+			attractiveness[self.choice] += alpha * FRA.sigmoid(self.score[-1], beta, gamma)
 
 		if DEB:
 			attactPrint = ["%.3f" % v for v in attractiveness]
 			print('attractiveness with WS\n', attactPrint)
 
-		# Adding 'FRA'
-		visited = FRA.code2Vector(self.where, Num_Loc)
-		sims1 = [0] + [FRA.sim_consist(visited, x) for x in self.regions]
-		overlap = FRA.code2Vector(self.score, Num_Loc) # Replace for joint
-		sims2 = [0] + [FRA.sim_consist(overlap, x) for x in self.complements]
-		sims2[0] = 0 # ALL's complement, NOTHING, does not repel to ALL
-		FRAsims = np.add(sims1, sims2)
-		attractiveness = np.add(attractiveness, [delta * FRA.sigmoid(x, epsilon, zeta) for x in FRAsims])
+#		# Adding 'FRA'
+#		visited = FRA.code2Vector(self.where, Num_Loc)
+#		sims1 = [0] + [FRA.sim_consist(visited, x) for x in self.regions]
+#		overlap = FRA.code2Vector(self.score, Num_Loc) # Replace for joint
+#		sims2 = [0] + [FRA.sim_consist(overlap, x) for x in self.complements]
+#		sims2[0] = 0 # ALL's complement, NOTHING, does not repel to ALL
+#		FRAsims = np.add(sims1, sims2)
+#		attractiveness = np.add(attractiveness, [delta * FRA.sigmoid(x, epsilon, zeta) for x in FRAsims])
 
 		if DEB:
 			attactPrint = ["%.3f" % v for v in attractiveness]
@@ -96,15 +101,12 @@ class player :
 class Experiment :
 	'''Object defining the experiment and simulation'''
 
-	def __init__(self, gameParameters, modelParameters, non_shaky_hand=1):
+	def __init__(self, gameParameters, modelParameters):
 		assert(len(gameParameters) == 4), "Game parameters incorrect length!"
 		self.gameParameters = gameParameters
 		self.modelParameters = modelParameters
-		self.non_shaky_hand = non_shaky_hand
 		# Create data frame
-		cols = ['Group', 'Round', 'Player','Decision']
-		cols += list(range(self.gameParameters[2]))
-		cols += ['Score', 'Strategy']
+		cols = ['Group', 'Round', 'Player','Decision','Score', 'Strategy']
 		self.df = pd.DataFrame(columns=cols)
 
 	def run_group(self, TO_FILE=True):
@@ -116,22 +118,24 @@ class Experiment :
 		# Create players
 		Players = []
 		for k in range(0, Pl):
-			Players.append(player(False, "", 0, [], [], 0, False, int(uniform(0, 1000000)), self.modelParameters[k]))
+			Players.append(player(0, 0, [], [], int(uniform(0, 1000000)), self.modelParameters[k]))
 
 		# Start the rounds
 		for i in range(1, rounds+1):
+			print('***********************************')
+			print('Ronda:',i)
+			print('***********************************')
 			# Playing round i
 			Num_Loc = i
 
 			#Initializing players for round
 			for pl in Players:
-				pl.decision = ""
-				pl.ready = False
-				pl.score = 0
-				pl.accuracy = False
+				pl.decision = 0
 				pl.strategies = [FRA.lettercode2Strategy(x, i) for x in pl.regionsCoded]
 				pl.regions = [FRA.code2Vector(x, i) for x in pl.strategies]
 				pl.complements = [[1 - x for x in sublist] for sublist in pl.regions]
+				print('Jugador',pl.name,'Elige',pl.choice)
+				
 			
 			# Determine players' chosen region
 			chosen_strategies = []
@@ -142,7 +146,6 @@ class Experiment :
 					chosen_strategies.append(list(np.random.choice(Num_Loc, n, replace=False)))
 				else:
 					chosen_strategies.append(Players[k].strategies[chosen - 1])
-				chosen_strategies[k] = self.shake(chosen_strategies[k])
 
 			# Player decides whether to assist or not
 			for k in range(0, Pl):
@@ -152,6 +155,8 @@ class Experiment :
 					Players[k].decision = 1
 				else:
 					Players[k].decision = 0
+				print('Jugador',k,'Decide',Players[k].decision)
+
 
 			# Get results and store data in dataframe (returns players with updated scores)
 			Players = self.round2dataframe(Players, i, TO_FILE)
@@ -159,16 +164,6 @@ class Experiment :
 			# Players determine their next strategies
 			for k in range(0,Pl):
 				Players[k].make_decision(Num_Loc+1)
-	
-	def shake(self, strategy):
-		if uniform(0, 1) > self.non_shaky_hand:
-			p = 2
-			outs = np.random.choice(strategy, p) if len(strategy) > 0 else []
-			complement = [i for i in range(64) if i not in strategy]
-			ins = np.random.choice(complement, p) if len(complement) > 0 else []
-			return [i for i in strategy if i not in outs] + list(ins)
-		else:
-			return strategy
 
 	def run_simulation(self):
 		iters = self.gameParameters[3] # number of experiments in a set
@@ -194,25 +189,23 @@ class Experiment :
 				# Bar was overcrowded
 				if Players[k].decision == 0:
 					# Player k's decision is Correct
-					Players[k].accuracy = True
+					Players[k].score.append(0)
 				else:
 					# Player k's decision is Incorrect
-					Players[k].accuracy = False
-					Players[k].score -= 1
+					Players[k].score.append(-1)
 			else:
 				# Bar was not overcrowded
 				if Players[k].decision == 0:
 					# Player k's decision is Incorrect
-					Players[k].accuracy = False
+					Players[k].score.append(0)
 				else:
 					# Player k's decision is Correct
-					Players[k].accuracy = True
-					Players[k].score += 1
+					Players[k].score.append(1)
 			row_of_data['Group'] = [group]
 			row_of_data['Round'] = [round]
 			row_of_data['Player'] = [Players[k].name]
 			row_of_data['Decision'] = [Players[k].decision]
-			row_of_data['Score'] = [Players[k].score]
+			row_of_data['Score'] = [Players[k].score[-1]]
 			row_of_data['Strategy'] = [Players[k].choice]
 			# Add data to dataFrame
 			dfAux = pd.DataFrame.from_dict(row_of_data)
@@ -224,7 +217,7 @@ class Experiment :
 					dfAux.to_csv(f, header=False)
 			else:
 				self.df = self.df.append(dfAux, ignore_index = True)
-
+				
 		return Players
 
 	def save(self):
