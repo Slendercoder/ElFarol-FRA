@@ -1,0 +1,76 @@
+\documentclass{article}
+\usepackage{amsmath}
+
+\title{Modelos de toma de decisión heurística para el problema del bar El Farol}
+\author{Semillero de modelación y simulación de fenómenos sociales}
+\date{}
+
+\newcommand{\attrac}{\mbox{Attract}}
+\newcommand{\logi}{\mbox{logistic}}
+\newcommand{\dist}{\mbox{dist}}
+\newcommand{\fradist}{\mbox{\textsc{FRAdist}}}
+\newcommand{\bias}[1]{\ensuremath{\mbox{\textsc{bias}$_{\mbox{\tiny ${#1}$}}$}}}
+
+\begin{document}
+
+\subsubsection*{Toma de decisiones}
+
+Los modelos descritos a continuación basan el proceso de toma de decisiones en una elección aleatoria entre las estrategias focales. La probabilidad de elegir una estrategia focal $k$, $P(k)$, está dada por la fórmula
+%
+\begin{equation}\label{eq:probabilidades}
+P(k)=\frac{\attrac(k, i, s)}{\sum_{k'}\attrac(k',i,s)}
+\end{equation}
+%
+en donde $i$ es el historial de asistencia del jugador y $s$ el puntaje obtenido en la última ronda. La diferencia entre modelos consistirá en la manera en que definen la función $\attrac$.
+
+\subsubsection*{Modelo MBiases}
+
+Este modelo sólo considera los sesgos a priori de cada una de las regiones focales. De esta manera,
+%
+\begin{equation}\label{eq:MBiases}
+\attrac(k, i, s)=\bias{k}
+\end{equation}
+%
+Para la región \textsc{rs}, se tiene 
+%
+\begin{equation}\label{eq:MBiases}
+\attrac(\mbox{\textsc{rs}}, i, s)=\bias{\mbox{\textsc{rs}}} =  1-\sum_{k}\bias{k}
+\end{equation}
+%
+
+\subsubsection*{Modelo WSLS}
+
+Este modelo considera, además de los sesgos a priori, la heurística win stay, lose shift. De esta manera,
+%
+\begin{equation}\label{eq:WSLS}
+\attrac(k, i, s)=\bias{k} + \alpha*\logi(s,\beta,\gamma)*I(k,i)
+\end{equation}
+%
+donde
+%
+\[
+I(k,i)=\begin{cases}
+1,&\mbox{ si }k=i\\
+0,&\mbox{ en otro caso}\\
+\end{cases}
+\]
+
+\subsubsection*{Modelo FRA}
+
+Finalmente, el modelo \textsc{fra} considera la heurística basada en estrategias focales como atractores. Se tiene,
+%
+\begin{align}\label{eq:FRA}
+\attrac(k, i, s, j)=&\bias{k} + \alpha*\logi(s,\beta,\gamma)*I(k,i)  \\
+&+ 1-\delta*\logi(\fradist(k,i),\epsilon,\zeta) \nonumber
+\end{align}
+%
+donde
+%
+\[
+\fradist(k,i)=\dist(k,i) + \dist(k^c, j)\qquad  \dist(k,i)=\sum_{n=1}^{NumLoc}|k_n-i_n|
+\]
+%
+y $k^c$ es el complemento de $k$ y $j$ es el vector de `overcrowding', donde la componente $j_n$ es 1 si la asistencia la bar en la ronda $n$ superó el umbral y 0 si no.  
+
+
+\end{document}
