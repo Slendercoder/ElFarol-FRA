@@ -40,6 +40,7 @@ class player :
 		self.strategies = []
 		self.regions = []
 		self.complements = []
+		self.overcrowded = []
 
 	def make_decision(self, Num_Loc):
 		attractiveness = self.attract(Num_Loc)
@@ -82,14 +83,14 @@ class player :
 			attactPrint = ["%.3f" % v for v in attractiveness]
 			print('attractiveness with WS\n', attactPrint)
 
-#		# Adding 'FRA'
-#		visited = FRA.code2Vector(self.where, Num_Loc)
-#		sims1 = [0] + [FRA.sim_consist(visited, x) for x in self.regions]
-#		overlap = FRA.code2Vector(self.score, Num_Loc) # Replace for joint
-#		sims2 = [0] + [FRA.sim_consist(overlap, x) for x in self.complements]
-#		sims2[0] = 0 # ALL's complement, NOTHING, does not repel to ALL
-#		FRAsims = np.add(sims1, sims2)
-#		attractiveness = np.add(attractiveness, [delta * FRA.sigmoid(x, epsilon, zeta) for x in FRAsims])
+		# Adding 'FRA'
+		visited = self.regions[self.choice-1]
+		sims1 = [0] + [FRA.distance(visited, x) for x in self.regions]
+		overlap = self.overcrowded
+		sims2 = [0] + [FRA.distance(overlap, x) for x in self.complements]
+		sims2[0] = 0 # ALL's complement, NOTHING, does not repel to ALL
+		FRAsims = np.add(sims1, sims2)
+		attractiveness = np.add(attractiveness, [1 - delta * FRA.sigmoid(x, epsilon, zeta) for x in FRAsims])
 
 		if DEB:
 			attactPrint = ["%.3f" % v for v in attractiveness]
@@ -121,18 +122,17 @@ class Experiment :
 			Players.append(player(0, 0, [], [], int(uniform(0, 1000000)), self.modelParameters[k]))
 
 		# Start the rounds
-		for i in range(1, rounds+1):
+		for Num_Loc in range(1, rounds+1):
 			print('***********************************')
-			print('Ronda:',i)
+			print('Ronda:',Num_Loc)
 			print('***********************************')
 			# Playing round i
-			Num_Loc = i
 
 			#Initializing players for round
 			for pl in Players:
 				pl.decision = 0
-				pl.strategies = [FRA.lettercode2Strategy(x, i) for x in pl.regionsCoded]
-				pl.regions = [FRA.code2Vector(x, i) for x in pl.strategies]
+				pl.strategies = [FRA.lettercode2Strategy(x, Num_Loc) for x in pl.regionsCoded]
+				pl.regions = [FRA.code2Vector(x, Num_Loc) for x in pl.strategies]
 				pl.complements = [[1 - x for x in sublist] for sublist in pl.regions]
 				print('Jugador',pl.name,'Elige',pl.choice)
 				
@@ -159,7 +159,7 @@ class Experiment :
 
 
 			# Get results and store data in dataframe (returns players with updated scores)
-			Players = self.round2dataframe(Players, i, TO_FILE)
+			Players = self.round2dataframe(Players, Num_Loc, TO_FILE)
 
 			# Players determine their next strategies
 			for k in range(0,Pl):
@@ -184,6 +184,7 @@ class Experiment :
 		overcrowded = len([p for p in Players if p.decision == 1])/len(Players) > self.gameParameters[0]
 		# Save data per player
 		for k in range(0, len(Players)):
+			Players[k].overcrowded.append(int(overcrowded))
 			# Determine individual scores
 			if overcrowded:
 				# Bar was overcrowded
