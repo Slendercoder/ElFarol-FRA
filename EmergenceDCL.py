@@ -68,16 +68,16 @@ class player :
 				self.regions[6].append(0)
 		
 		# 2 players:
-		self.regions = [[0,1]*30,[1,0]*30]
+		# self.regions = [[1]*60,[0]*60,[0,1]*30,[1,0]*30] # ALL, NOTHING, ALTER1, ALTER2
 
 	def decide(self):
-		attractiveness = self.attract2p() #attract/attract2p
+		attractiveness = self.attract5p() #attract5p/attract2p
 		sum = np.sum(attractiveness)
 		probabilities = [x/sum for x in attractiveness]
 		newChoice = choices(range(len(self.parameters)-5), weights=probabilities)[0]
 		self.choice = newChoice
 
-	def attract(self, DEB=False):
+	def attract5p(self, DEB=False):
 		wALL = float(self.parameters['ALL'])
 		wNOTHING = float(self.parameters['NOTHING'])
 		wALTER1 = float(self.parameters['ALTER1'])
@@ -126,9 +126,11 @@ class player :
 		return attractiveness
 
 	def attract2p(self, DEB=False):
+		wALL = float(self.parameters['ALL'])
+		wNOTHING = float(self.parameters['NOTHING'])
 		wALTER1 = float(self.parameters['ALTER1'])
 		wALTER2 = float(self.parameters['ALTER2'])
-		attractiveness = [wALTER1, wALTER2]
+		attractiveness = [wALL, wNOTHING, wALTER1, wALTER2]
 		wRS = 1 - np.sum(np.array(attractiveness))
 		assert(wRS >= 0), "Incorrect biases! Sum greater than 1"
 		attractiveness = [wRS] + attractiveness

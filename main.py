@@ -31,8 +31,10 @@ TO_FILE = True
 
 # 2 players:
 playerParameters = {}
-playerParameters['ALTER1'] = 0.5 # Bias towards 3-GO-2-STAY
-playerParameters['ALTER2'] = 0.5 # Bias towards 3-GO-2-STAY
+playerParameters['ALL'] = 0.1 # Bias towards ALL
+playerParameters['NOTHING'] = 0.1 # Bias towards NOTHING
+playerParameters['ALTER1'] = 0.1 # Bias towards ALTER
+playerParameters['ALTER2'] = 0.1 # Bias towards ALTER
 
 playerParameters['alpha'] = 100 # How much the focal region augments attractiveness
 playerParameters['beta'] = 500 # Amplitude of the WSLS sigmoid function
